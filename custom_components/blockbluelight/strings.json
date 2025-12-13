@@ -1,0 +1,19 @@
+{
+  "config": {
+    "step": {
+      "bluetooth_confirm": {
+        "description": "Do you want to add the BlockBlueLight device {name} to Home Assistant?"
+      },
+      "user": {
+        "data": {
+          "address": "Device"
+        },
+        "description": "Select your BlockBlueLight device"
+      }
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "no_devices_found": "No BlockBlueLight devices found"
+    }
+  }
+}

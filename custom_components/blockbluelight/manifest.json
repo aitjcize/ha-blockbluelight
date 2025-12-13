@@ -1,0 +1,21 @@
+{
+  "domain": "blockbluelight",
+  "name": "BlockBlueLight",
+  "codeowners": ["@aitjcize"],
+  "config_flow": true,
+  "dependencies": ["bluetooth"],
+  "documentation": "https://github.com/aitjcize/ha-blockbluelight",
+  "issue_tracker": "https://github.com/aitjcize/ha-blockbluelight/issues",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "requirements": ["bleak>=0.21.0", "bleak-retry-connector>=3.1.0"],
+  "version": "1.0.0",
+  "bluetooth": [
+    {
+      "local_name": "BLOCK*"
+    },
+    {
+      "service_uuid": "0000fff0-0000-1000-8000-00805f9b34fb"
+    }
+  ]
+}
