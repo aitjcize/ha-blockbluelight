@@ -140,6 +140,11 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_disconnect(self) -> None:
         """Disconnect from device."""
+        # Don't disconnect if countdown is active
+        if self._countdown_timer:
+            _LOGGER.debug("Skipping disconnect - countdown timer is active")
+            return
+
         self._expected_disconnect = True
         if self._disconnect_timer:
             self._disconnect_timer.cancel()
@@ -147,10 +152,6 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         if self._auto_off_timer:
             self._auto_off_timer.cancel()
-
-        if self._countdown_timer:
-            self._countdown_timer.cancel()
-            self._countdown_timer = None
 
         if self._client and self._client.is_connected:
             _LOGGER.debug("Disconnecting from %s", self._ble_device.address)
@@ -260,11 +261,14 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.error("Error sending command: %s", err)
             raise UpdateFailed(f"Failed to send command: {err}") from err
 
-        # Schedule disconnect after delay
-        self._disconnect_timer = self.hass.loop.call_later(
-            DISCONNECT_DELAY,
-            lambda: asyncio.create_task(self.async_disconnect()),
-        )
+        # Schedule disconnect after delay (unless countdown is active)
+        if not self._countdown_timer:
+            self._disconnect_timer = self.hass.loop.call_later(
+                DISCONNECT_DELAY,
+                lambda: asyncio.create_task(self.async_disconnect()),
+            )
+        else:
+            _LOGGER.debug("Skipping disconnect timer - countdown is active")
 
     async def _query_status(self) -> None:
         """Query device status."""
@@ -310,10 +314,23 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     COUNTDOWN_INTERVAL, lambda: self._update_countdown()
                 )
             else:
-                # Timer expired, query device to confirm state
-                _LOGGER.debug("Countdown complete, querying device status")
+                # Timer expired, query device to confirm state and update light
+                _LOGGER.info("Countdown complete, querying device status")
                 self._countdown_timer = None
-                asyncio.create_task(self._query_status())
+
+                async def query_and_disconnect():
+                    try:
+                        await self._query_status()
+                        # Wait for status response
+                        await asyncio.sleep(1)
+                        # Now safe to disconnect
+                        await self.async_disconnect()
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Error querying status after countdown: %s", err
+                        )
+
+                asyncio.create_task(query_and_disconnect())
         else:
             self._countdown_timer = None
 
