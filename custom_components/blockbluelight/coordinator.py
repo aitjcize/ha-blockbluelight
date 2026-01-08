@@ -13,6 +13,7 @@ from bleak_retry_connector import (
     establish_connection,
 )
 from homeassistant.components import bluetooth
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
@@ -20,6 +21,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .const import (
+    CONF_TIMER_DURATION,
     DEFAULT_TIMER_DURATION,
     DOMAIN,
     NOTIFY_CHAR_UUID,
@@ -47,6 +49,7 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         hass: HomeAssistant,
         ble_device: BLEDevice,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize."""
         super().__init__(
@@ -55,12 +58,15 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=DOMAIN,
         )
         self._ble_device = ble_device
+        self._entry = entry
         self._client: BleakClientWithServiceCache | None = None
         self._disconnect_timer: asyncio.TimerHandle | None = None
         self._is_on: bool = False
         self._expected_disconnect = False
         self._auto_off_timer: asyncio.TimerHandle | None = None
-        self._timer_duration: int = DEFAULT_TIMER_DURATION  # minutes
+        self._timer_duration: int = entry.options.get(
+            CONF_TIMER_DURATION, DEFAULT_TIMER_DURATION
+        )
         self._timer_remaining: int = 0  # seconds remaining on device timer
         self._countdown_timer: asyncio.TimerHandle | None = None
         self._countdown_start_time: float | None = None
@@ -79,6 +85,12 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Set timer duration in minutes."""
         self._timer_duration = duration
         _LOGGER.debug("Timer duration set to %d minutes", duration)
+
+        # Persist to config entry options
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            options={**self._entry.options, CONF_TIMER_DURATION: duration},
+        )
 
     @property
     def timer_remaining(self) -> int:

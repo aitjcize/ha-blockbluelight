@@ -31,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Could not find BlockBlueLight device with address {address}"
         )
 
-    coordinator = BlockBlueLightCoordinator(hass, ble_device)
+    coordinator = BlockBlueLightCoordinator(hass, ble_device, entry)
 
     try:
         await coordinator.async_connect()

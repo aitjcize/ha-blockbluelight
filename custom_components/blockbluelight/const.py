@@ -6,6 +6,7 @@ DOMAIN = "blockbluelight"
 DEFAULT_TIMER_DURATION = 15  # minutes
 MIN_TIMER_DURATION = 1
 MAX_TIMER_DURATION = 60
+CONF_TIMER_DURATION = "timer_duration"
 
 # BLE Service and Characteristic UUIDs
 SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb"
