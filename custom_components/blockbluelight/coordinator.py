@@ -99,8 +99,14 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_connect(self) -> None:
         """Connect to the device."""
+        # Force disconnect any existing connection first to prevent stale connections
         if self._client and self._client.is_connected:
-            return
+            _LOGGER.info(
+                "Existing connection detected, forcing disconnect before reconnecting"
+            )
+            await self.async_force_disconnect()
+            # Give device time to fully disconnect
+            await asyncio.sleep(1)
 
         _LOGGER.debug("Connecting to %s", self._ble_device.address)
 
@@ -168,6 +174,35 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._client and self._client.is_connected:
             _LOGGER.debug("Disconnecting from %s", self._ble_device.address)
             await self._client.disconnect()
+
+    async def async_force_disconnect(self) -> None:
+        """Force disconnect from device, ignoring countdown timer state."""
+        self._expected_disconnect = True
+
+        # Cancel all timers
+        if self._disconnect_timer:
+            self._disconnect_timer.cancel()
+            self._disconnect_timer = None
+
+        if self._auto_off_timer:
+            self._auto_off_timer.cancel()
+            self._auto_off_timer = None
+
+        if self._countdown_timer:
+            self._countdown_timer.cancel()
+            self._countdown_timer = None
+            self._countdown_start_time = None
+
+        if self._client and self._client.is_connected:
+            _LOGGER.info(
+                "Force disconnecting from %s", self._ble_device.address
+            )
+            try:
+                await self._client.disconnect()
+            except Exception as err:
+                _LOGGER.warning("Error during force disconnect: %s", err)
+
+        self._client = None
 
     def _disconnected(self, client: BleakClientWithServiceCache) -> None:
         """Handle disconnection."""
