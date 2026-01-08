@@ -265,10 +265,16 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         }
                     )
 
-                    # Start/stop countdown based on timer state
-                    if timer_seconds > 0 and not self._countdown_timer:
+                    # Start/stop countdown based on timer state and power state
+                    if (
+                        timer_seconds > 0
+                        and new_state
+                        and not self._countdown_timer
+                    ):
                         self._start_countdown()
-                    elif timer_seconds == 0 and self._countdown_timer:
+                    elif (
+                        timer_seconds == 0 or not new_state
+                    ) and self._countdown_timer:
                         self._stop_countdown()
 
         elif cmd_type == POWER_CMD_TYPE:
@@ -282,6 +288,11 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "Device state updated: %s", "ON" if new_state else "OFF"
                     )
                     self.async_set_updated_data({"is_on": self._is_on})
+
+                    # Stop countdown when device turns off
+                    if not new_state and self._countdown_timer:
+                        _LOGGER.info("Device turned off, stopping countdown")
+                        self._stop_countdown()
 
         elif cmd_type == TIMER_CMD_TYPE:
             # Timer command acknowledgment
@@ -432,9 +443,15 @@ class BlockBlueLightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._auto_off_timer.cancel()
             self._auto_off_timer = None
 
+        # Stop countdown timer when turning off
+        if self._countdown_timer:
+            _LOGGER.info("Turning off device, stopping countdown")
+            self._stop_countdown()
+
         await self._send_command(TURN_OFF_CMD)
         self._is_on = False
-        self.async_set_updated_data({"is_on": False})
+        self._timer_remaining = 0
+        self.async_set_updated_data({"is_on": False, "timer_remaining": 0})
 
     async def _auto_turn_off(self) -> None:
         """Automatically turn off device after timer expires."""
