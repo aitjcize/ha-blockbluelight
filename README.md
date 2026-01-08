@@ -185,17 +185,21 @@ Then restart Home Assistant and check the logs.
 
 ## Device Details
 
-- **MAC Address**: 3C:AB:72:5E:F5:22
-- **Device Name**: BLOCK3CAB725EF522
+### BLE Protocol Information
+
+- **Device Name Pattern**: `BLOCK` followed by MAC address (e.g., `BLOCK3CAB725EF522`)
 - **Service UUID**: 0000fff0-0000-1000-8000-00805f9b34fb
 - **Write Characteristic**: 0000fff2-0000-1000-8000-00805f9b34fb (FFF2)
 - **Notify Characteristic**: 0000fff1-0000-1000-8000-00805f9b34fb (FFF1)
 
 **Note**: Characteristic naming is opposite of typical convention - FFF2 is for writing, FFF1 is for notifications.
 
-Commands:
+### Commands
+
 - **Turn ON**: `3A 01 20 00 01 01 23 0A`
 - **Turn OFF**: `3A 01 20 00 01 00 22 0A`
+- **Status Query**: `3A 01 10 00 00 11 0A`
+- **Set Timer**: `3A 01 31 00 02 [timer_high] [timer_low] [checksum] 0A`
 
 ## Repository Structure
 
